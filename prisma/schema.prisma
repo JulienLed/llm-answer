@@ -1,0 +1,141 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Get a free hosted Postgres database in seconds: `npx create-db`
+
+generator client {
+  provider = "prisma-client"
+  output   = "../app/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Character {
+  id                   Int      @id @unique @default(autoincrement())
+  createdAt            DateTime @default(now())
+  name                 String
+  physical_description String
+  personality          String
+  history              String
+  relation_evolution   String[]
+
+  //Relations
+  conversations Conversation[]
+}
+
+model Conversation {
+  id        Int      @id @unique @default(autoincrement())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  //Perception de l'interlocuteur
+  perceived_mood      String[] @default([])
+  perceived_traits    String[] @default([])
+  perceived_interests String[] @default([])
+  perceived_notes     String   @default("")
+
+  //Etat du personnage
+  relation_with_user String
+  actualMood         String
+  feeling_about_user String @default("")
+
+  //Sujets abordés
+  subjects String[] @default([])
+
+  //Relations
+  character   Character? @relation(fields: [characterId], references: [id])
+  characterId Int?
+  messages    Message[]
+}
+
+model Message {
+  id        Int      @id @unique @default(autoincrement())
+  createdAt DateTime @default(now())
+  role      Role
+  content   String
+
+  //Relations
+  conversation   Conversation? @relation(fields: [conversationId], references: [id])
+  conversationId Int?
+}
+
+enum Role {
+  USER
+  CHARACTER
+}
+
+///////////////
+////AUTH.JS////
+///////////////
+
+model User {
+  id            String          @id @default(cuid())
+  name          String?
+  email         String          @unique
+  emailVerified DateTime?
+  image         String?
+  accounts      Account[]
+  sessions      Session[]
+  // Optional for WebAuthn support
+  Authenticator Authenticator[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Account {
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([provider, providerAccountId])
+}
+
+model Session {
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model VerificationToken {
+  identifier String
+  token      String
+  expires    DateTime
+
+  @@id([identifier, token])
+}
+
+// Optional for WebAuthn support
+model Authenticator {
+  credentialID         String  @unique
+  userId               String
+  providerAccountId    String
+  credentialPublicKey  String
+  counter              Int
+  credentialDeviceType String
+  credentialBackedUp   Boolean
+  transports           String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([userId, credentialID])
+}
