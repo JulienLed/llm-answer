@@ -1,8 +1,9 @@
-"use client";
-import { signIn } from "next-auth/react";
+import SignInForm from "@/components/authentification/SignInForm";
 
 export default function Page() {
-  return <button onClick={() => signIn()}>Sign In</button>;
+  return (
+    <div className="flex-1 flex flex-col justify-center items-center">
+      <SignInForm />
+    </div>
+  );
 }
-
-//Ne fonctionne pas, rien ne se passe. Chercher à écrire la fonction signin en server compo
