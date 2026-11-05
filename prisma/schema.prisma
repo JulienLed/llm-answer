@@ -30,6 +30,9 @@ model Conversation {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  userId String @unique @default(cuid())
+  user   User   @relation(fields: [userId], references: [id])
+
   //Perception de l'interlocuteur
   perceived_mood      String[] @default([])
   perceived_traits    String[] @default([])
@@ -79,6 +82,7 @@ model User {
   image         String?
   accounts      Account[]
   sessions      Session[]
+  conversation  Conversation?
   // Optional for WebAuthn support
   Authenticator Authenticator[]
 

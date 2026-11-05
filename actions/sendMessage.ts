@@ -5,16 +5,27 @@ import {
   getConversation,
   getCharacter,
   getMessages,
-  saveLLMMessage,
+  saveUserMessage,
 } from "@/actions/datas";
 import { prisma } from "@/lib/prisma";
+import { auth } from "@/lib/auth";
+import { saveLLMMessage } from "@/lib/messages";
 
 export async function sendMessage(input: string) {
+  const session = await auth();
+  if (!session)
+    return {
+      success: false as const,
+      data: "Utilisateur non-connecté. Redirection",
+    };
   const conversation = await getConversation();
-  const messages = await getMessages(conversation.id, input);
+  if (!conversation.success) return { success: false, data: conversation.data };
+  await saveUserMessage(input);
+  const messages = await getMessages(conversation.data.id);
   const character = await getCharacter();
-  const response = await groqLLM(messages, character, conversation);
-  if (!response[0].message.content) return "Pas de content";
+  const response = await groqLLM(messages, character, conversation.data);
+  if (!response[0].message.content)
+    return { success: false as const, data: "Pas de message" };
   const content: ContentType = JSON.parse(response[0].message.content);
   const {
     perceived_interests,
@@ -28,7 +39,7 @@ export async function sendMessage(input: string) {
   } = content.conversation;
   await prisma.conversation.upsert({
     where: {
-      id: conversation.id,
+      id: conversation.data.id,
     },
     update: {
       perceived_interests,
@@ -51,6 +62,6 @@ export async function sendMessage(input: string) {
       subjects,
     },
   });
-  await saveLLMMessage(content.message, conversation.id);
-  return content.message;
+  await saveLLMMessage(content.message, conversation.data.id);
+  return { success: true as const, data: content.message };
 }

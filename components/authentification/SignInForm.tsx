@@ -1,35 +1,29 @@
-import { auth, signIn } from "@/lib/auth";
+"use client";
+
 import Link from "next/link";
 import { Label } from "../ui/label";
 import { Input } from "../ui/input";
 import { Button } from "../ui/button";
 import { Card, CardContent, CardFooter } from "../ui/card";
+import { useActionState } from "react";
+import { SignInVerification } from "@/actions/session";
+import { Spinner } from "../ui/spinner";
+import { toast } from "sonner";
 
-export default async function SignInForm() {
-  const session = await auth();
-  if (session?.user)
-    return (
-      <div className="flex flex-col items-center gap-2">
-        <p>Vous êtes déjà connecté. Revenir à l'accueil</p>
-        <Button asChild variant={"outline"} className="w-fit">
-          <Link href={"/"}>Accueil</Link>
-        </Button>
-      </div>
-    );
+export default function SignInForm() {
+  const [error, formAction, isPending] = useActionState(
+    async (prev: string | null, formData: FormData) => {
+      const result = await SignInVerification(prev, formData);
+      if (result) toast.error(result);
+      return result;
+    },
+    null,
+  );
 
   return (
     <Card>
       <CardContent>
-        <form
-          action={async (formData) => {
-            "use server";
-            await signIn("credentials", {
-              ...Object.fromEntries(formData),
-              redirectTo: "/",
-            });
-          }}
-          className="flex flex-col items-center gap-5"
-        >
+        <form action={formAction} className="flex flex-col items-center gap-5">
           <Label className="grid grid-cols-2">
             Utiliateur
             <Input name="user" />
@@ -38,7 +32,9 @@ export default async function SignInForm() {
             Mot de passe
             <Input name="password" type="password" />
           </Label>
-          <Button className="w-fit">Se connecter</Button>
+          <Button className="w-fit">
+            {isPending ? <Spinner /> : "Se connecter"}
+          </Button>
         </form>
       </CardContent>
       <CardFooter>

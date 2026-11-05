@@ -5,6 +5,7 @@ import { cn } from "@/lib/utils";
 import SignOutForm from "@/components/authentification/SignOutForm";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
+import { Toaster } from "@/components/ui/sonner";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-sans" });
 
@@ -46,7 +47,8 @@ export default function RootLayout({
           </Button>
           <SignOutForm />
         </header>
-        {children}
+        <main className="flex-1 flex flex-col">{children}</main>
+        <Toaster />
       </body>
     </html>
   );

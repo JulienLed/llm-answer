@@ -1,9 +1,29 @@
 "use server";
 
+import { signIn } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { CredentialsSchema } from "@/lib/zod";
 import bcrypt from "bcrypt";
+import { AuthError } from "next-auth";
 import { redirect } from "next/navigation";
+
+export const SignInVerification = async (
+  _prev: string | null,
+  formData: FormData,
+) => {
+  try {
+    await signIn("credentials", {
+      ...Object.fromEntries(formData),
+      redirectTo: "/",
+    });
+    return null;
+  } catch (error) {
+    //Si l'erreur est une erreur AuthJs, on retourne une erreur sur le signin
+    if (error instanceof AuthError) return "Identifiants invalides";
+    //Si c'est une autre erreur, c'est l'erreur qy'utilise nextjs pour le redirect. Il faut throw l'error pour que la redirection fonctionne
+    throw error;
+  }
+};
 
 export const getRegistrated = async (formData: FormData) => {
   try {
