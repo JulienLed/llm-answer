@@ -20,14 +20,6 @@ export const getConversation = async () => {
   if (!conversation) {
     const newConversation = await prisma.conversation.create({
       data: {
-        perceived_interests: [],
-        perceived_mood: [],
-        perceived_notes: "",
-        perceived_traits: [],
-        relation_with_user: "",
-        actualMood: "",
-        feeling_about_user: "",
-        subjects: [],
         userId: session.user.id,
       },
     });
@@ -36,13 +28,7 @@ export const getConversation = async () => {
   return { success: true as const, data: conversation };
 };
 
-export const getCharacter = async () => {
-  //Il faudra chercher l'utilisateur connecté quand plusieurs utilisateurs
-  const character = await prisma.character.findMany();
-  return character[0];
-};
-
-//On récupère tout les messages (user et llm).
+//On récupère tout les messages de la conversation.
 export const getMessages = async (conversationId: number) => {
   //Vérifier c'est le bon utilisateur
   const user = await prisma.conversation.findUnique({
@@ -73,7 +59,7 @@ export const getMessages = async (conversationId: number) => {
 export const saveUserMessage = async (inputUser: string) => {
   const conversation = await getConversation();
 
-  if (!conversation.success) return;
+  if (!conversation.success) return conversation;
 
   await prisma.message.create({
     data: {
@@ -82,6 +68,7 @@ export const saveUserMessage = async (inputUser: string) => {
       conversationId: conversation.data.id,
     },
   });
+  return conversation;
 };
 
 //On efface une conversation

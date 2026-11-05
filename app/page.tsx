@@ -1,6 +1,5 @@
 "use client";
 
-import { sendMessage } from "@/actions/sendMessage";
 import { useEffect, useRef, useState, useTransition } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -8,6 +7,7 @@ import {
   deleteConversation,
   getConversation,
   getMessages,
+  saveUserMessage,
 } from "@/actions/datas";
 import { Message } from "./generated/prisma/client";
 import { Textarea } from "@/components/ui/textarea";
@@ -17,7 +17,6 @@ import { toast } from "sonner";
 
 export default function Page() {
   const [input, setInput] = useState<string>("");
-  const [llmResponse, setLlmResponse] = useState<string>("");
   const [messages, setMessages] = useState<Message[]>([]);
   const [isPendingMessages, startTransitionMessages] = useTransition();
   const [isPendingSend, startTransitionSend] = useTransition();
@@ -34,8 +33,7 @@ export default function Page() {
         setMessages(await getMessages(conversation.data.id));
       }
     });
-    setInput("");
-  }, [llmResponse]);
+  }, []);
 
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
@@ -43,12 +41,13 @@ export default function Page() {
 
   const handleOnClickSend = () => {
     startTransitionSend(async () => {
-      const response = await sendMessage(input);
-      if (!response.success) {
-        toast.error(response.data);
+      const conversation = await saveUserMessage(input);
+      if (!conversation.success) {
+        toast.error(conversation.data);
         redirect("/login");
       } else {
-        setLlmResponse(response.data);
+        setMessages(await getMessages(conversation.data.id));
+        setInput("");
       }
     });
   };

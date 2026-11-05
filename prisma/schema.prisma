@@ -12,19 +12,6 @@ datasource db {
   provider = "postgresql"
 }
 
-model Character {
-  id                   Int      @id @unique @default(autoincrement())
-  createdAt            DateTime @default(now())
-  name                 String
-  physical_description String
-  personality          String
-  history              String
-  relation_evolution   String[]
-
-  //Relations
-  conversations Conversation[]
-}
-
 model Conversation {
   id        Int      @id @unique @default(autoincrement())
   createdAt DateTime @default(now())
@@ -33,24 +20,8 @@ model Conversation {
   userId String @unique @default(cuid())
   user   User   @relation(fields: [userId], references: [id])
 
-  //Perception de l'interlocuteur
-  perceived_mood      String[] @default([])
-  perceived_traits    String[] @default([])
-  perceived_interests String[] @default([])
-  perceived_notes     String   @default("")
-
-  //Etat du personnage
-  relation_with_user String
-  actualMood         String
-  feeling_about_user String @default("")
-
-  //Sujets abordés
-  subjects String[] @default([])
-
   //Relations
-  character   Character? @relation(fields: [characterId], references: [id])
-  characterId Int?
-  messages    Message[]
+  messages Message[]
 }
 
 model Message {
@@ -66,7 +37,7 @@ model Message {
 
 enum Role {
   USER
-  CHARACTER
+  ASSISTANT
 }
 
 ///////////////
