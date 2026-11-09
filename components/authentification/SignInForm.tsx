@@ -11,7 +11,7 @@ import { Spinner } from "../ui/spinner";
 import { toast } from "sonner";
 
 export default function SignInForm() {
-  const [error, formAction, isPending] = useActionState(
+  const [, formAction, isPending] = useActionState(
     async (prev: string | null, formData: FormData) => {
       const result = await SignInVerification(prev, formData);
       if (result) toast.error(result);

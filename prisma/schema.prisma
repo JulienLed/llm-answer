@@ -21,6 +21,7 @@ model Conversation {
 
   character String
   rules     String
+  facts     String
   //Français par défault. Il faudra créer un enum pour d'autres langues
   langage   String   @default("français")
   date      DateTime @default(now())

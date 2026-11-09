@@ -3,7 +3,7 @@
 import { auth } from "@/lib/auth";
 import { prisma } from "../lib/prisma";
 import { defaultContext } from "@/lib/llm";
-import { mistralAPI } from "@/lib/mistral";
+import { getFactsByMistral, mistralAPI } from "@/lib/mistral";
 
 export const getConversation = async () => {
   const session = await auth();
@@ -25,6 +25,7 @@ export const getConversation = async () => {
         character: defaultContext.character,
         rules: defaultContext.rules,
         userId: session.user.id,
+        facts: "",
       },
     });
     return { success: true as const, data: newConversation };
@@ -63,6 +64,16 @@ export const getMessages = async () => {
   return { success: true as const, data: messages.reverse() };
 };
 
+//On récupère les faits marquants
+export const getFacts = async () => {
+  const conversation = await getConversation();
+
+  if (!conversation.success)
+    return { success: false as const, data: "Il y a eu une erreur" };
+
+  return { success: true as const, data: conversation.data.facts };
+};
+
 //On sauvegarde le message du User.
 export const saveUserMessage = async (inputUser: string) => {
   const conversation = await getConversation();
@@ -82,6 +93,40 @@ export const saveUserMessage = async (inputUser: string) => {
   return { success: true, data: response };
 };
 
+//On update les faits remarquables
+export const updateFacts = async () => {
+  const conversation = await getConversation();
+
+  if (!conversation.success)
+    return { success: false as const, data: "Il y a eu une erreur" };
+  const messages = await getMessages();
+
+  if (!messages.success)
+    return { success: false as const, data: messages.data };
+
+  const actualFacts = await getFacts();
+  if (!actualFacts.success)
+    return { success: false as const, data: messages.data };
+
+  const facts = await getFactsByMistral(
+    conversation.data,
+    messages.data,
+    actualFacts.data,
+  );
+  if (!facts.success) return { success: false as const, data: messages.data };
+
+  console.log("Les faits marquandts : " + JSON.stringify(facts.data));
+
+  await prisma.conversation.update({
+    where: {
+      id: conversation.data.id,
+    },
+    data: {
+      facts: facts.data,
+    },
+  });
+};
+
 //On sauvegarde la réponse du llm.
 export const saveLLMMessage = async () => {
   const conversation = await getConversation();
@@ -94,7 +139,14 @@ export const saveLLMMessage = async () => {
   if (!messages.success)
     return { success: false as const, data: messages.data };
 
-  const message = await mistralAPI(conversation.data, messages.data);
+  const facts = await getFacts();
+  if (!facts.success) return { success: false as const, data: messages.data };
+
+  const message = await mistralAPI(
+    conversation.data,
+    messages.data,
+    facts.data,
+  );
   if (!message.success) return { success: false as const, data: message.data };
 
   const response = await prisma.message.create({

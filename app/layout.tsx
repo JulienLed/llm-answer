@@ -41,7 +41,7 @@ export default function RootLayout({
       )}
     >
       <body className="min-h-screen w-full flex flex-col">
-        <header className="flex justify-end">
+        <header className="flex justify-end gap-5">
           <Button>
             <Link href={"/"}>Accueil</Link>
           </Button>

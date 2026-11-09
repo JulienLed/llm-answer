@@ -9,6 +9,7 @@ import {
   getMessages,
   saveLLMMessage,
   saveUserMessage,
+  updateFacts,
 } from "@/actions/datas";
 import { Message } from "./generated/prisma/client";
 import { Textarea } from "@/components/ui/textarea";
@@ -54,6 +55,7 @@ export default function Page() {
         return;
       }
       await saveLLMMessage();
+      await updateFacts();
       const response = await getMessages();
       if (!response.success) {
         toast.error(response.data);
@@ -114,7 +116,7 @@ export default function Page() {
             />
             <div className="w-full flex justify-evenly">
               <Button onClick={handleOnClickSend}>
-                {isPendingSend ? "Envoi..." : "Valider"}
+                {isPendingSend ? <Spinner /> : "Valider"}
               </Button>
               <Button variant={"destructive"} onClick={handleOnClickDelete}>
                 {isPendingDelete ? <Spinner /> : "Supprimer la conversation"}
