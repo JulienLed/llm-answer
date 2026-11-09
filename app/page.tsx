@@ -7,6 +7,7 @@ import {
   deleteConversation,
   getConversation,
   getMessages,
+  saveLLMMessage,
   saveUserMessage,
 } from "@/actions/datas";
 import { Message } from "./generated/prisma/client";
@@ -18,7 +19,7 @@ import { toast } from "sonner";
 export default function Page() {
   const [input, setInput] = useState<string>("");
   const [messages, setMessages] = useState<Message[]>([]);
-  const [isPendingMessages, startTransitionMessages] = useTransition();
+  const [, startTransitionMessages] = useTransition();
   const [isPendingSend, startTransitionSend] = useTransition();
   const [isPendingDelete, startTransitionDelete] = useTransition();
   const endRef = useRef<HTMLDivElement>(null);
@@ -30,7 +31,13 @@ export default function Page() {
         toast.error(conversation.data);
         redirect("/login");
       } else {
-        setMessages(await getMessages(conversation.data.id));
+        const response = await getMessages();
+        if (!response.success) {
+          toast.error(response.data);
+          return;
+        } else {
+          setMessages(response.data);
+        }
       }
     });
   }, []);
@@ -43,12 +50,18 @@ export default function Page() {
     startTransitionSend(async () => {
       const conversation = await saveUserMessage(input);
       if (!conversation.success) {
-        toast.error(conversation.data);
-        redirect("/login");
-      } else {
-        setMessages(await getMessages(conversation.data.id));
-        setInput("");
+        toast.error("Il y a eu une erreur");
+        return;
       }
+      await saveLLMMessage();
+      const response = await getMessages();
+      if (!response.success) {
+        toast.error(response.data);
+        return;
+      } else {
+        setMessages(response.data);
+      }
+      setInput("");
     });
   };
 

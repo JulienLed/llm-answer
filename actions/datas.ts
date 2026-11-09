@@ -2,6 +2,8 @@
 
 import { auth } from "@/lib/auth";
 import { prisma } from "../lib/prisma";
+import { defaultContext } from "@/lib/llm";
+import { mistralAPI } from "@/lib/mistral";
 
 export const getConversation = async () => {
   const session = await auth();
@@ -20,6 +22,8 @@ export const getConversation = async () => {
   if (!conversation) {
     const newConversation = await prisma.conversation.create({
       data: {
+        character: defaultContext.character,
+        rules: defaultContext.rules,
         userId: session.user.id,
       },
     });
@@ -28,12 +32,16 @@ export const getConversation = async () => {
   return { success: true as const, data: conversation };
 };
 
-//On récupère tout les messages de la conversation.
-export const getMessages = async (conversationId: number) => {
+//On récupère tout les messages (user et llm).
+export const getMessages = async () => {
+  const conversation = await getConversation();
+  if (!conversation.success)
+    return { success: false as const, data: conversation.data };
+
   //Vérifier c'est le bon utilisateur
   const user = await prisma.conversation.findUnique({
     where: {
-      id: conversationId,
+      id: conversation.data.id,
     },
     select: {
       userId: true,
@@ -41,34 +49,64 @@ export const getMessages = async (conversationId: number) => {
   });
   const session = await auth();
   if (!session || !session.user || !user || session.user.id !== user?.userId)
-    return [];
+    return { success: false as const, data: "Pas d'utilisateur connecté" };
 
   const messages = await prisma.message.findMany({
     where: {
-      conversationId,
+      conversationId: conversation.data.id,
     },
     orderBy: {
       createdAt: "desc",
     },
     take: 20,
   });
-  return messages.reverse();
+  return { success: true as const, data: messages.reverse() };
 };
 
-//On sauveragrde le message du User.
+//On sauvegarde le message du User.
 export const saveUserMessage = async (inputUser: string) => {
   const conversation = await getConversation();
 
-  if (!conversation.success) return conversation;
+  if (!conversation.success)
+    return { success: false as const, data: "Il y a eu une erreur" };
 
-  await prisma.message.create({
+  const response = await prisma.message.create({
     data: {
       role: "USER",
       content: inputUser,
       conversationId: conversation.data.id,
     },
   });
-  return conversation;
+  if (!response)
+    return { success: false as const, data: "Il y a eu une erreur" };
+  return { success: true, data: response };
+};
+
+//On sauvegarde la réponse du llm.
+export const saveLLMMessage = async () => {
+  const conversation = await getConversation();
+
+  if (!conversation.success)
+    return { success: false as const, data: "Il y a eu une erreur" };
+
+  const messages = await getMessages();
+
+  if (!messages.success)
+    return { success: false as const, data: messages.data };
+
+  const message = await mistralAPI(conversation.data, messages.data);
+  if (!message.success) return { success: false as const, data: message.data };
+
+  const response = await prisma.message.create({
+    data: {
+      role: "ASSISTANT",
+      content: message.data,
+      conversationId: conversation.data.id,
+    },
+  });
+  if (!response)
+    return { success: false as const, data: "Il y a eu une erreur" };
+  return { success: true, data: response };
 };
 
 //On efface une conversation
